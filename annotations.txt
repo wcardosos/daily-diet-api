@@ -1,0 +1,2 @@
+The "--loader" node command flag is used to run Node code with other lib. The knex lib need to run with --import instead --loader
+To pass parameters to lib on npm run is needed to use "npm run command -- -flag
