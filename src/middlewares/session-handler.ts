@@ -15,8 +15,6 @@ export async function sessionHandler(req: FastifyRequest, reply: FastifyReply) {
       .select('id', 'full_name', 'email', 'session_id')
       .where('session_id', sessionId)
 
-    console.log(`user id: ${user.id}`)
-
     req.user = {
       id: user.id,
       email: user.email,
