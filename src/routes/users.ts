@@ -1,14 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyInstance } from 'fastify'
-import { z } from 'zod'
-import { knex } from '../database'
-import { randomUUID } from 'node:crypto'
-import bcrypt from 'bcrypt'
+import { ZodError, z } from 'zod'
+import { RegisterUserService } from '../services/users/register'
+import { UsersRepository } from '../repositories/users'
+import { LoginUserService } from '../services/users/login'
 
 /*
   Cookies
 
   São formas de se manter contexto entre requisições.
 */
+
+const usersRepository = new UsersRepository()
 
 export async function usersRoutes(app: FastifyInstance) {
   app.post('/register', async (req, reply) => {
@@ -18,24 +21,32 @@ export async function usersRoutes(app: FastifyInstance) {
       password: z.string(),
     })
 
-    const { email, fullName, password } = registerUserBodySchema.parse(req.body)
+    try {
+      const { email, fullName, password } = registerUserBodySchema.parse(
+        req.body,
+      )
 
-    const sessionId = randomUUID()
+      const { sessionId } = await new RegisterUserService(
+        usersRepository,
+      ).execute({
+        fullName,
+        email,
+        password,
+      })
 
-    await knex('users').insert({
-      id: randomUUID(),
-      full_name: fullName,
-      email,
-      password: await bcrypt.hash(password, 10),
-      session_id: sessionId,
-    })
+      reply.cookie('sessionId', sessionId, {
+        path: '/',
+        maxAge: 60 * 60 * 6, // 6 hours
+      })
 
-    reply.cookie('sessionId', sessionId, {
-      path: '/',
-      maxAge: 60 * 60 * 6, // 6 hours
-    })
+      return reply.status(201).send()
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        return reply.status(400).send({ message: error.format() })
+      }
 
-    return reply.status(201).send()
+      return reply.status(500).send(error.message)
+    }
   })
 
   app.post('/login', async (req, reply) => {
@@ -46,21 +57,22 @@ export async function usersRoutes(app: FastifyInstance) {
 
     const { email, password } = loginUserBodySchema.parse(req.body)
 
-    const [user] = await knex('users')
-      .select('email', 'password', 'session_id')
-      .where('email', email)
+    try {
+      const { sessionId } = await new LoginUserService(usersRepository).execute(
+        {
+          email,
+          password,
+        },
+      )
 
-    if (!user) return reply.status(404).send()
+      reply.cookie('sessionId', sessionId, {
+        path: '/',
+        maxAge: 60 * 60 * 6, // 6 hours
+      })
 
-    const isCorrectPassword = await bcrypt.compare(password, user.password)
-
-    if (!isCorrectPassword) return reply.status(401).send()
-
-    reply.cookie('sessionId', user.session_id, {
-      path: '/',
-      maxAge: 60 * 60 * 6, // 6 hours
-    })
-
-    return reply.send()
+      return reply.send()
+    } catch (error: any) {
+      return reply.status(401).send(error.message)
+    }
   })
 }
