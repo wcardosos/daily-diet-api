@@ -9,7 +9,12 @@ export async function mealsRoutes(app: FastifyInstance) {
   app.get('/', { preHandler: [sessionHandler] }, async (req, reply) => {
     const meals = await knex('meals').select('*').where('user_id', req.user?.id)
 
-    return reply.send(meals)
+    return reply.send(
+      meals.map((meal) => ({
+        ...meal,
+        part_of_diet: Boolean(meal.part_of_diet),
+      })),
+    )
   })
 
   app.post('/', { preHandler: [sessionHandler] }, async (req, reply) => {
@@ -49,7 +54,9 @@ export async function mealsRoutes(app: FastifyInstance) {
 
     if (!meal) return reply.status(404).send()
 
-    return reply.status(200).send(meal)
+    return reply
+      .status(200)
+      .send({ ...meal, part_of_diet: Boolean(meal.part_of_diet) })
   })
 
   app.put('/:id', { preHandler: [sessionHandler] }, async (req, reply) => {

@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx --watch --env-file .env src/server.ts",
-    "knex": "node --import tsx ./node_modules/.bin/knex"
+    "dev": "tsx --watch src/server.ts",
+    "knex": "node --import tsx ./node_modules/.bin/knex",
+    "test": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -14,9 +15,13 @@
     "@rocketseat/eslint-config": "^2.2.2",
     "@types/bcrypt": "^5.0.2",
     "@types/node": "^20.12.3",
+    "@types/supertest": "^6.0.2",
+    "dotenv": "^16.4.5",
     "eslint": "^8.57.0",
+    "supertest": "^6.3.4",
     "tsx": "^4.7.1",
-    "typescript": "^5.4.3"
+    "typescript": "^5.4.3",
+    "vitest": "^1.4.0"
   },
   "dependencies": {
     "@fastify/cookie": "^9.3.1",
