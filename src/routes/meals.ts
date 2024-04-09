@@ -1,20 +1,24 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FastifyInstance } from 'fastify'
-import { knex } from '../database'
 import { z } from 'zod'
-import { randomUUID } from 'node:crypto'
 import { sessionHandler } from '../middlewares/session-handler'
+import { MealsRepository } from '../repositories/meals'
+import { FetchAllMealsService } from '../services/meals/fetch-all'
+import { FetchMealByIdService } from '../services/meals/fetch-by-id'
+import { CreateMealService } from '../services/meals/create'
+import { UpdateMealService } from '../services/meals/update'
+import { DeleteMealService } from '../services/meals/delete'
+
+const mealsRepository = new MealsRepository()
 
 // This is a Fastify plugin. A plugin is a way to separate application logics in files.
 export async function mealsRoutes(app: FastifyInstance) {
   app.get('/', { preHandler: [sessionHandler] }, async (req, reply) => {
-    const meals = await knex('meals').select('*').where('user_id', req.user?.id)
+    const { meals } = await new FetchAllMealsService(mealsRepository).execute({
+      userId: req.user!.id,
+    })
 
-    return reply.send(
-      meals.map((meal) => ({
-        ...meal,
-        part_of_diet: Boolean(meal.part_of_diet),
-      })),
-    )
+    return reply.send(meals.map((meal) => meal.toJson()))
   })
 
   app.post('/', { preHandler: [sessionHandler] }, async (req, reply) => {
@@ -28,13 +32,12 @@ export async function mealsRoutes(app: FastifyInstance) {
       req.body,
     )
 
-    await knex('meals').insert({
-      id: randomUUID(),
+    await new CreateMealService(mealsRepository).execute({
       name,
       description,
-      part_of_diet: partOfDiet,
-      time: new Date(time).toISOString(),
-      user_id: req.user?.id,
+      partOfDiet,
+      time,
+      userId: req.user!.id,
     })
 
     return reply.status(201).send()
@@ -47,16 +50,18 @@ export async function mealsRoutes(app: FastifyInstance) {
 
     const { id } = updateMealParamsSchema.parse(req.params)
 
-    const [meal] = await knex('meals').select('*').where({
-      id,
-      user_id: req.user?.id,
-    })
+    try {
+      const fetchMealByIdService = new FetchMealByIdService(mealsRepository)
 
-    if (!meal) return reply.status(404).send()
+      const { meal } = await fetchMealByIdService.execute({
+        id,
+        userId: req.user!.id,
+      })
 
-    return reply
-      .status(200)
-      .send({ ...meal, part_of_diet: Boolean(meal.part_of_diet) })
+      return reply.send(meal.toJson())
+    } catch (error: any) {
+      return reply.status(error.statusCode).send()
+    }
   })
 
   app.put('/:id', { preHandler: [sessionHandler] }, async (req, reply) => {
@@ -74,18 +79,14 @@ export async function mealsRoutes(app: FastifyInstance) {
     )
     const { id } = updateMealParamsSchema.parse(req.params)
 
-    await knex('meals')
-      .update({
-        name,
-        description,
-        part_of_diet: partOfDiet,
-        time: new Date(time).toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .where({
-        id,
-        user_id: req.user?.id,
-      })
+    await new UpdateMealService(mealsRepository).execute({
+      id,
+      name,
+      description,
+      partOfDiet,
+      time,
+      userId: req.user!.id,
+    })
 
     return reply.status(200).send()
   })
@@ -97,9 +98,9 @@ export async function mealsRoutes(app: FastifyInstance) {
 
     const { id } = updateMealParamsSchema.parse(req.params)
 
-    await knex('meals').delete().where({
+    await new DeleteMealService(mealsRepository).execute({
       id,
-      user_id: req.user?.id,
+      userId: req.user!.id,
     })
 
     return reply.status(200).send()

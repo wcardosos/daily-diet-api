@@ -63,7 +63,7 @@ describe('Meals routes', () => {
         expect.objectContaining({
           name: 'Breakfast',
           description: 'Bacon and eggs',
-          part_of_diet: false,
+          partOfDiet: false,
           time: expect.any(String),
         }),
       ])
@@ -86,7 +86,7 @@ describe('Meals routes', () => {
         expect.objectContaining({
           name: 'Breakfast',
           description: 'Bacon and eggs',
-          part_of_diet: false,
+          partOfDiet: false,
           time: expect.any(String),
         }),
       )
@@ -119,7 +119,7 @@ describe('Meals routes', () => {
         expect.objectContaining({
           name: 'Breakfast',
           description: 'Watermelon',
-          part_of_diet: true,
+          partOfDiet: true,
         }),
       )
     })
