@@ -8,6 +8,7 @@ import { FetchMealByIdService } from '../services/meals/fetch-by-id'
 import { CreateMealService } from '../services/meals/create'
 import { UpdateMealService } from '../services/meals/update'
 import { DeleteMealService } from '../services/meals/delete'
+import { GetMealsMetricsService } from '../services/meals/metrics'
 
 const mealsRepository = new MealsRepository()
 
@@ -104,5 +105,13 @@ export async function mealsRoutes(app: FastifyInstance) {
     })
 
     return reply.status(200).send()
+  })
+
+  app.get('/metrics', { preHandler: [sessionHandler] }, async (req, reply) => {
+    const metrics = await new GetMealsMetricsService(mealsRepository).execute({
+      userId: req.user!.id,
+    })
+
+    return reply.send(metrics)
   })
 }

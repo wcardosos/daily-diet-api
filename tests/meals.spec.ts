@@ -6,13 +6,17 @@ import { createUserRequest } from './utils'
 import { FastifyInstance } from 'fastify'
 import { knex } from '../src/database'
 
-async function createMeal(app: FastifyInstance, cookies: string[]) {
+async function createMeal(
+  app: FastifyInstance,
+  cookies: string[],
+  inDiet: boolean = false,
+) {
   await request(app.server)
     .post('/meals')
     .send({
       name: 'Breakfast',
       description: 'Bacon and eggs',
-      partOfDiet: false,
+      partOfDiet: inDiet,
       time: '2024-04-07 18:33:00',
     })
     .set('Cookie', cookies)
@@ -139,6 +143,27 @@ describe('Meals routes', () => {
         const [mealsCount] = await knex('meals').count({ count: '*' })
 
         expect(mealsCount.count).toBe(0)
+      })
+    })
+
+    describe('[GET] /meals/metrics', () => {
+      it('should return the metrics', async () => {
+        const cookies = await createUserRequest(app)
+        await createMeal(app, cookies, false)
+        await createMeal(app, cookies, true)
+        await createMeal(app, cookies, true)
+
+        const response = await request(app.server)
+          .get('/meals/metrics')
+          .set('Cookie', cookies)
+
+        expect(response.body).toEqual({
+          count: 3,
+          inDiet: 2,
+          offDiet: 1,
+          bestSequence: 2,
+          inDietPercentage: 66.7,
+        })
       })
     })
   })

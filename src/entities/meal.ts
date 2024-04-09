@@ -1,6 +1,6 @@
 import { Entity } from './entity'
 
-interface Props {
+export interface Props {
   name: string
   description: string
   partOfDiet: boolean

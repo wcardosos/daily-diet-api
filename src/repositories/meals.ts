@@ -1,9 +1,13 @@
 import { knex } from '../database'
-import { Meal } from '../entities/meal'
+import { Meal, Props as MealsProps } from '../entities/meal'
 
 export class MealsRepository {
-  async findAll(userId: string): Promise<Meal[]> {
-    const meals = await knex('meals').select('*').where('user_id', userId)
+  async findAll(userId: string, orderBy?: keyof MealsProps): Promise<Meal[]> {
+    const meals = await knex('meals')
+      .select('*')
+      .where('user_id', userId)
+      .orderBy(orderBy || 'created_at')
+
     return meals.map(
       (meal) =>
         new Meal(
@@ -67,5 +71,35 @@ export class MealsRepository {
       id,
       user_id: userId,
     })
+  }
+
+  async count(userId: string): Promise<number> {
+    const [mealsCount] = await knex('meals')
+      .where('user_id', userId)
+      .count({ count: '*' })
+
+    return Number(mealsCount.count)
+  }
+
+  async countInDiet(userId: string): Promise<number> {
+    const [mealsInDiet] = await knex('meals')
+      .where({
+        part_of_diet: true,
+        user_id: userId,
+      })
+      .count({ count: '*' })
+
+    return Number(mealsInDiet.count)
+  }
+
+  async countOffDiet(userId: string): Promise<number> {
+    const [mealsOffDiet] = await knex('meals')
+      .where({
+        part_of_diet: false,
+        user_id: userId,
+      })
+      .count({ count: '*' })
+
+    return Number(mealsOffDiet.count)
   }
 }
